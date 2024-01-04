@@ -1,0 +1,89 @@
+﻿@page "/"
+@using Danilvar.Calculator.Services
+@using Danilvar.Calculator.Responses
+
+<PageTitle>DVar Weather</PageTitle>
+
+<div class="input-group mb-2">
+    <input @onkeydown="GetWeatherOnKey"
+           @bind="_searchQuery"
+           @bind:event="oninput"
+           type="search"
+           placeholder="ENTER CITY..."
+           class="form-control bg-secondary no-border txt-light-pink pixel-font"/>
+
+    <div class="ms-2">
+        <button @onclick="GetWeather" class="btn btn-outline-primary" type="submit">GET CURRENT WEATHER</button>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <ErrorAlert Message="WRONG QUERY!!! TRY AGAIN!!!" />
+}
+
+@if (_currentResponse == null)
+{
+    <Loading/>
+}
+else
+{
+    <div class="mt-4 mx-4">
+        <h1 class="display-5 txt-mid-pink ">
+            @_currentResponse?.Location.Name.ToUpper()
+        </h1>
+        <p class="txt-white">
+            @_currentResponse?.Location.Country.ToUpper(),
+            @_currentResponse?.Location.Region.ToUpper()
+            <span class="txt-gray">(@_currentResponse?.Location.LocalTime)</span>
+        </p>
+
+        <div class="text-center">
+            <h1 class="display-3 txt-bright-pink">
+                @_currentResponse?.Current.Temp_C°C
+            </h1>
+            <p class="txt-white">(FEELS LIKE @_currentResponse?.Current.Feelslike_C)°C</p>
+            <p class="txt-white">@_currentResponse?.Current.Condition.Text.ToUpper()</p>
+            <p class="txt-gray">WIND: @_currentResponse?.Current.Wind_Kph km/h, HUM.: @_currentResponse?.Current.Humidity%</p>
+
+        </div>
+    </div>
+}
+
+@code
+{
+    [Inject]
+    public required IWeatherService WeatherService { get; set; }
+
+    private GetCurrentResponse? _currentResponse;
+    private string _searchQuery = "";
+    private string _errorMessage = string.Empty;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        _currentResponse = await WeatherService.GetCurrentAsync("auto:ip");
+    }
+
+    private async Task GetWeatherOnKey(KeyboardEventArgs args)
+    {
+        if (args.Key != "Enter")
+            return;
+
+        await GetWeather();
+    }
+
+    private async Task GetWeather()
+    {
+        try
+        {
+            _currentResponse = await WeatherService.GetCurrentAsync(_searchQuery);
+
+        }
+        catch (HttpRequestException e)
+        {
+            _errorMessage = e.Message;
+        }
+        
+        StateHasChanged();
+    }
+}
